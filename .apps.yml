@@ -1,0 +1,7 @@
+---
+channel: beta
+apps:
+  cortex-stt:
+    repository: hass-cortex/app-cortex-stt
+    target: cortex-stt
+    image: ghcr.io/hass-cortex/cortex_stt/{arch}

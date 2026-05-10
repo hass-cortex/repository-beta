@@ -1,0 +1,36 @@
+---
+name: Repository Updater
+
+# yamllint disable-line rule:truthy
+on:
+  repository_dispatch:
+    types:
+      - update
+
+  # Manual trigger for forced re-runs
+  workflow_dispatch:
+    inputs:
+      addon:
+        description: 'App slug to update (leave empty for all)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  updater:
+    name: Run repository updater for ${{ github.event.client_payload.addon || inputs.addon || 'all apps' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout metadata repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Repository Updater
+        uses: hassio-addons/repository-updater@v2.0.1
+        with:
+          token: ${{ secrets.UPDATER_TOKEN }}
+          repository: ${{ github.repository }}
+          addon: ${{ github.event.client_payload.addon || inputs.addon || '' }}
