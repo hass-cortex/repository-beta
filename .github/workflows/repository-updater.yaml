@@ -35,6 +35,14 @@ jobs:
 
       - name: Run Repository Updater
         uses: hassio-addons/repository-updater@v2.0.1
+        env:
+          # Override git identity inside the action container — the action
+          # tries to read user.email from the token's GitHub profile, but
+          # private emails are returned as null and git refuses to commit.
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
         with:
           token: ${{ secrets.UPDATER_TOKEN }}
           repository: ${{ github.repository }}
