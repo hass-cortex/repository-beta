@@ -14,6 +14,11 @@ on:
         description: 'App slug to update (leave empty for all)'
         required: false
         type: string
+      force:
+        description: 'Force update even if version unchanged'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -34,3 +39,4 @@ jobs:
           token: ${{ secrets.UPDATER_TOKEN }}
           repository: ${{ github.repository }}
           addon: ${{ github.event.client_payload.addon || inputs.addon || '' }}
+          force: ${{ inputs.force || false }}
