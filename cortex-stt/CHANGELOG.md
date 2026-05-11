@@ -1,1 +1,1 @@
-**Full Changelog**: https://github.com/hass-cortex/app-cortex-stt/compare/0.1.4-beta.1...0.1.4-beta.2
+**Full Changelog**: https://github.com/hass-cortex/app-cortex-stt/compare/0.1.3...0.1.4
