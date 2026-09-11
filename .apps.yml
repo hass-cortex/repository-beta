@@ -5,3 +5,7 @@ apps:
     repository: hass-cortex/app-cortex-stt
     target: cortex-stt
     image: ghcr.io/hass-cortex/cortex_stt/{arch}
+  hojo-tts:
+    repository: hass-cortex/app-hojo-tts
+    target: hojo-tts
+    image: ghcr.io/hass-cortex/hojo_tts/{arch}
