@@ -65,6 +65,14 @@ switches exist for callers whose text is already prepared.
 The app's UI shows the prepared text — **What the model is asked to say** —
 beside the composer, so you can read it before spending a synthesis on it.
 
+![The composer and the prepared text](https://raw.githubusercontent.com/hass-cortex/app-hojo-tts/main/images/composer.png)
+
+Left is what you typed; right is what the model receives. Each row under
+**Rewrites** is one change: `number` for an expansion, `script` for the glyph
+conversion with the count of glyphs it touched, `stop` for punctuation added at
+the end. A pass that did not fire leaves no row — which is how you tell "nothing
+needed rewriting" from "the switch is off".
+
 ## Installation
 
 [![Open this app in your Home Assistant instance.][app-badge]][app]
@@ -123,16 +131,56 @@ while contributing nothing to the voice.
 
 ## Configuration
 
-| Option              | Default        | Notes                                                                                                        |
-| ------------------- | -------------- | ------------------------------------------------------------------------------------------------------------ |
-| `log_level`         | `info`         | `debug` shows the prepared text for every request                                                            |
-| `num_threads`       | `2`            | Scaling is nearly flat — the decode loop is Python-bound — so raising this mostly costs the rest of the host |
-| `max_loaded_models` | `1`            | Both models resident costs ~2.8 GB. At 1 they swap on demand.                                                |
-| `default_model`     | `hojo-40m`     | Used when a request names no model                                                                           |
-| `default_voice`     | `hojo_zh_f_01` | Ignored when the model does not offer it                                                                     |
-| `temperature`       | `0.8`          | How randomly each step is chosen. `0` is reproducible and never over-runs, at the cost of flatter delivery   |
-| `preload`           | `true`         | Loads the default model at startup so the first request is not slow                                          |
-| `discovery_api_key` | generated      | Clear it and restart to rotate                                                                               |
+### Option: `log_level`
+
+How much the app writes to its log. `debug` additionally prints the prepared
+text for every request — what the model was actually asked to say — which is
+the fastest way to see whether the text passes did what you expected.
+
+### Option: `num_threads`
+
+ONNX Runtime threads per synthesis; `0` lets the runtime decide. Scaling is
+nearly flat because the decode loop is Python-bound, so raising this mostly
+costs the rest of the host rather than buying speed. Leave it at `2` unless
+you have cores to spare.
+
+### Option: `max_loaded_models`
+
+How many models may stay in memory at once. The 40M needs about 780 MB and the
+80M about 2 GB, so the default of `1` swaps between them on demand. Raise it to
+`2` only if the host can hold both — about 2.8 GB.
+
+### Option: `default_model`
+
+The model used when a request does not name one. The 40M has built-in voices
+and is roughly four times cheaper; the 80M clones a voice from a recording you
+upload.
+
+### Option: `default_voice`
+
+The voice used when a request does not name one, such as `hojo_zh_f_01`. It is
+ignored when the chosen model does not offer it, and the first available voice
+is used instead. Leave it empty to always take the first voice.
+
+### Option: `temperature`
+
+How randomly the model picks each step. It stops speaking only when it
+_samples_ its end-of-speech token, so a higher value occasionally over-runs the
+text with an invented syllable. `0` is greedy: reproducible, never over-runs,
+at the cost of flatter delivery.
+
+### Option: `preload`
+
+Load the default model when the app starts rather than on the first request.
+Costs about a second of startup and roughly 780 MB of memory, and removes that
+delay from the first thing you ask it to say.
+
+### Option: `discovery_api_key`
+
+The key the Hojo TTS integration uses. Generated on first start and pushed to
+Home Assistant through the discovery service, so it normally needs no
+attention. Clear the field and restart to rotate it; the integration picks up
+the new value by itself.
 
 ## API
 

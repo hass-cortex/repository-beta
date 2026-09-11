@@ -1,9 +1,9 @@
 name: Hojo TTS
-description: "On-device text-to-speech (Hojo TTS Light ONNX) with a Chinese text pipeline\
-  \ \u2014 Traditional-to-Simplified conversion and number/unit normalisation"
-version: 0.1.0
+description: On-device text-to-speech with fifteen built-in Chinese and English voices,
+  or clone one from a few seconds of audio
+version: 0.1.1
 slug: hojo_tts
-url: https://github.com/hass-cortex/repository
+url: https://github.com/hass-cortex/app-hojo-tts
 arch:
 - amd64
 startup: services

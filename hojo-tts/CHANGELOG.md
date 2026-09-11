@@ -1,1 +1,1 @@
-**Full Changelog**: https://github.com/hass-cortex/app-hojo-tts/commits/0.1.0
+**Full Changelog**: https://github.com/hass-cortex/app-hojo-tts/compare/0.1.0...0.1.1
