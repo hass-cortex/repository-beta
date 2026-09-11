@@ -21,6 +21,7 @@ For production use, install the stable catalog instead: <https://github.com/hass
 | App | Slug | Source |
 |-----|------|--------|
 | Cortex STT | `cortex_stt` | [app-cortex-stt](https://github.com/hass-cortex/app-cortex-stt) |
+| Hojo TTS | `hojo_tts` | [app-hojo-tts](https://github.com/hass-cortex/app-hojo-tts) |
 
 ## License
 
