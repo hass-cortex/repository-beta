@@ -1,5 +1,5 @@
 name: Cortex TTS
-description: "On-device text-to-speech in Chinese, English and Japanese \u2014 three\
+description: On-device text-to-speech for Home Assistant — a choice of ONNX models on CPU, built-in voices or one cloned from six seconds of audio, plus the Chinese text pipeline they all lack
   \ models, built-in voices or one cloned from a few seconds of audio"
 version: 0.1.0
 slug: cortex_tts
