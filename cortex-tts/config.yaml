@@ -1,7 +1,8 @@
 name: Cortex TTS
-description: On-device text-to-speech for Home Assistant — a choice of ONNX models on CPU, built-in voices or one cloned from six seconds of audio, plus the Chinese text pipeline they all lack
-  \ models, built-in voices or one cloned from a few seconds of audio"
-version: 0.1.0
+description: "On-device text-to-speech for Home Assistant \u2014 three ONNX models\
+  \ running locally, built-in voices or one cloned from a short recording, plus the\
+  \ Chinese text pipeline they all lack"
+version: 0.2.1
 slug: cortex_tts
 url: https://github.com/hass-cortex/app-cortex-tts
 arch:
@@ -19,12 +20,11 @@ panel_title: Cortex TTS
 discovery:
 - cortex_tts
 ports:
-  8771/tcp: 8771
+  8771/tcp: null
 ports_description:
-  8771/tcp: TTS HTTP API and Admin UI
+  8771/tcp: TTS HTTP API and Admin UI (optional; bearer key required)
+ingress_stream: true
 map:
-- type: addon_config
-  read_only: false
 - type: share
   read_only: false
 options:

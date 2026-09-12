@@ -1,3 +1,1 @@
-**Full Changelog**: https://github.com/hass-cortex/app-cortex-tts/commits/0.1.0
-
-**Full Changelog**: https://github.com/hass-cortex/app-cortex-tts/commits/0.1.0
+**Full Changelog**: https://github.com/hass-cortex/app-cortex-tts/compare/0.2.0...0.2.1
