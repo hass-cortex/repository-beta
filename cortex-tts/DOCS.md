@@ -1,23 +1,34 @@
-# Hojo TTS
+# Cortex TTS
 
-On-device text-to-speech for Home Assistant. Runs the
-[Hojo TTS Light](https://github.com/HojoAI/Hojo-TTS-Light) ONNX models on CPU —
+On-device text-to-speech for Home Assistant. Runs
+[Hojo TTS Light](https://github.com/HojoAI/Hojo-TTS-Light) and
+[MOSS-TTS-Nano](https://github.com/OpenMOSS/MOSS-TTS-Nano) ONNX models on CPU —
 no GPU, no cloud, no API bill.
 
-Two models are available:
+Three models are available:
 
-| Model   | Voices                                    | Speed    | Memory  | Disk   |
-| ------- | ----------------------------------------- | -------- | ------- | ------ |
-| **40M** | 15 built-in (2 Chinese, 13 English)       | RTF 0.21 | ~780 MB | 241 MB |
-| **80M** | none built in; clones from your recording | RTF 0.79 | ~2 GB   | 437 MB |
+| Model         | Voices                                    | Speed    | Memory  | Disk   |
+| ------------- | ----------------------------------------- | -------- | ------- | ------ |
+| **40M**       | 15 built-in (2 Chinese, 13 English)       | RTF 0.21 | ~780 MB | 241 MB |
+| **80M**       | none built in; clones from your recording | RTF 0.79 | ~2 GB   | 437 MB |
+| **MOSS Nano** | 18 built-in (6 Chinese) **and** clones    | RTF 0.35 | ~2 GB   | 729 MB |
 
 RTF is the real-time factor: wall-clock time divided by the length of the audio
-produced. Below 1 means it speaks faster than the audio plays. Both figures were
+produced. Below 1 means it speaks faster than the audio plays. The figures were
 measured on a modern desktop core; a slower host scales roughly linearly.
 
-Start with the 40M. It is about four times cheaper and, in a measured ASR round
-trip, no less accurate than the 80M. Reach for the 80M only when you actually
-want a specific person's voice.
+Start with the 40M. It is the cheapest by a wide margin and, in a measured ASR
+round trip, no less accurate than the 80M.
+
+Reach for **MOSS Nano** when you want a choice of voice: it is the only model
+here with both a voice library and cloning, it speaks Japanese as well as
+Chinese and English, and it outputs 48 kHz. It costs about 2 GB of memory, and
+it reads Latin words poorly — measured at 32% character error rate on a reply
+containing a product name, against 0-9% for the other models — so it suits
+replies that are Chinese throughout.
+
+Reach for the **80M** only when you want one specific person's voice and the
+40M's built-ins will not do.
 
 ## Why the text pipeline exists
 
@@ -65,7 +76,7 @@ switches exist for callers whose text is already prepared.
 The app's UI shows the prepared text — **What the model is asked to say** —
 beside the composer, so you can read it before spending a synthesis on it.
 
-![The composer and the prepared text](https://raw.githubusercontent.com/hass-cortex/app-hojo-tts/main/images/composer.png)
+![The composer and the prepared text](https://raw.githubusercontent.com/hass-cortex/app-cortex-tts/main/images/composer.png)
 
 Left is what you typed; right is what the model receives. Each row under
 **Rewrites** is one change: `number` for an expansion, `script` for the glyph
@@ -91,15 +102,15 @@ table above says why.
 
 ### 2. Install the companion integration
 
-[![Open your Home Assistant instance and add the Hojo TTS integration via HACS.][hacs-badge]][hacs]
+[![Open your Home Assistant instance and add the Cortex TTS integration via HACS.][hacs-badge]][hacs]
 
 Press **Add**, then restart Home Assistant. (Requires
-[HACS](https://hacs.xyz).) Home Assistant has no Hojo TTS platform without it,
+[HACS](https://hacs.xyz).) Home Assistant has no Cortex TTS platform without it,
 and nothing will be discovered.
 
 ### 3. Pair with the running app
 
-After the restart a **Hojo TTS discovered** card appears under **Settings →
+After the restart a **Cortex TTS discovered** card appears under **Settings →
 Devices & services**. Click **Configure** and confirm — the address and the API
 key come from the app itself, so there is nothing to type. Each downloaded
 model becomes its own TTS entity.
@@ -108,7 +119,7 @@ model becomes its own TTS entity.
 
 [![Open your Home Assistant instance and manage your voice assistants.][va-badge]][va]
 
-Pick (or create) a pipeline → **Text-to-speech** → choose the Hojo TTS entity,
+Pick (or create) a pipeline → **Text-to-speech** → choose the Cortex TTS entity,
 then the voice. The voice is what picks the language: the model takes no
 language parameter, so a Chinese voice is the only thing that makes it read
 Chinese.
@@ -131,56 +142,82 @@ while contributing nothing to the voice.
 
 ## Configuration
 
+Two options are set in the app's configuration tab, because both have to be
+settled before the process starts. Everything else is in the app's own UI,
+under **Settings** — changing one there takes effect on the next request, and
+adding a model to the list no longer needs the app rebuilt.
+
 ### Option: `log_level`
 
 How much the app writes to its log. `debug` additionally prints the prepared
 text for every request — what the model was actually asked to say — which is
 the fastest way to see whether the text passes did what you expected.
 
-### Option: `num_threads`
+### Option: `discovery_api_key`
 
-ONNX Runtime threads per synthesis; `0` lets the runtime decide. Scaling is
-nearly flat because the decode loop is Python-bound, so raising this mostly
-costs the rest of the host rather than buying speed. Leave it at `2` unless
-you have cores to spare.
+The key the Cortex TTS integration uses. Generated on first start and pushed to
+Home Assistant through the discovery service, so it normally needs no
+attention. Clear the field and restart to rotate it; the integration picks up
+the new value by itself.
 
-### Option: `max_loaded_models`
+## Settings
+
+Open the app and scroll to **Settings**. Three of these are bound when ONNX
+Runtime creates a session, so adopting one drops whatever is resident and the
+next reply loads it again; the rest are read afresh on every request.
+
+### Inference threads
+
+ONNX Runtime threads per synthesis; `0` lets the runtime decide. **More is not
+faster.** The decode loop is Python-bound, so past a couple of threads the
+runtime spends its time synchronising them rather than working. Measured on a
+four-core host with MOSS-TTS-Nano, rendering 40 seconds of speech:
+
+| Threads | Time to render, against real time |
+| ------- | --------------------------------- |
+| 1       | 1.17x                             |
+| 2       | **1.05x**                         |
+| 4       | 1.80x                             |
+
+Leave it at `2`. Spare cores are not a reason to raise it — four threads on a
+four-core host was the slowest setting tested, by a wide margin.
+
+### Execution provider
+
+`auto` takes a GPU when one answers and the CPU when none does. `cuda` refuses
+to fall back, which is what you want on a host that has a card: a GPU build
+quietly running on the CPU is the failure nobody notices. What each loaded
+model actually got is printed on its card, beside **loaded**.
+
+MOSS-TTS-Nano measured 1.025x real time on a laptop i7 against **0.354x** on a
+GTX 1650 — the difference between a long reply outrunning the speaker and not.
+A CUDA-capable image is needed for `cuda` to answer at all.
+
+### Models kept in memory
 
 How many models may stay in memory at once. The 40M needs about 780 MB and the
 80M about 2 GB, so the default of `1` swaps between them on demand. Raise it to
 `2` only if the host can hold both — about 2.8 GB.
 
-### Option: `default_model`
+### Default model and voice
 
-The model used when a request does not name one. The 40M has built-in voices
-and is roughly four times cheaper; the 80M clones a voice from a recording you
-upload.
+Used when a request does not name one. The 40M has built-in voices and is
+roughly four times cheaper; the 80M clones a voice from a recording you upload.
+A voice the chosen model does not offer is ignored and the first available one
+is used instead, so leaving the voice empty always takes the first.
 
-### Option: `default_voice`
-
-The voice used when a request does not name one, such as `hojo_zh_f_01`. It is
-ignored when the chosen model does not offer it, and the first available voice
-is used instead. Leave it empty to always take the first voice.
-
-### Option: `temperature`
+### Sampling temperature
 
 How randomly the model picks each step. It stops speaking only when it
 _samples_ its end-of-speech token, so a higher value occasionally over-runs the
 text with an invented syllable. `0` is greedy: reproducible, never over-runs,
 at the cost of flatter delivery.
 
-### Option: `preload`
+### Load the default model at startup
 
 Load the default model when the app starts rather than on the first request.
 Costs about a second of startup and roughly 780 MB of memory, and removes that
 delay from the first thing you ask it to say.
-
-### Option: `discovery_api_key`
-
-The key the Hojo TTS integration uses. Generated on first start and pushed to
-Home Assistant through the discovery service, so it normally needs no
-attention. Clear the field and restart to rotate it; the integration picks up
-the new value by itself.
 
 ## API
 
@@ -226,22 +263,24 @@ unexpanded; the unit table is fixed, so an unusual unit needs a code change.
 
 **The voice adds a syllable that is not in the text.** The model stops only
 when it samples an end-of-speech token, so stopping is probabilistic. Set
-`temperature: 0` for output that is identical every time and never over-runs.
+**Sampling temperature** to 0 for output that is identical every time and
+never over-runs.
 
 **First request is slow, later ones are fast.** That is the model load. Turn on
-`preload`, or raise `max_loaded_models` if you switch between models often.
+**Load the default model at startup**, or raise **Models kept in memory** if
+you switch between models often.
 
-**Memory pressure.** Keep `max_loaded_models` at 1, and prefer the 40M.
+**Memory pressure.** Keep **Models kept in memory** at 1, and prefer the 40M.
 
 ## Support & Source
 
-- Source: <https://github.com/hass-cortex/app-hojo-tts>
-- Issues: <https://github.com/hass-cortex/app-hojo-tts/issues>
-- Integration (HACS): <https://github.com/hass-cortex/hojo-tts>
+- Source: <https://github.com/hass-cortex/app-cortex-tts>
+- Issues: <https://github.com/hass-cortex/app-cortex-tts/issues>
+- Integration (HACS): <https://github.com/hass-cortex/cortex-tts>
 
-[app]: https://my.home-assistant.io/redirect/supervisor_addon/?addon=24127962_hojo_tts&repository_url=https%3A%2F%2Fgithub.com%2Fhass-cortex%2Frepository
+[app]: https://my.home-assistant.io/redirect/supervisor_addon/?addon=24127962_cortex_tts&repository_url=https%3A%2F%2Fgithub.com%2Fhass-cortex%2Frepository
 [app-badge]: https://my.home-assistant.io/badges/supervisor_addon.svg
-[hacs]: https://my.home-assistant.io/redirect/hacs_repository/?owner=hass-cortex&repository=hojo-tts&category=integration
+[hacs]: https://my.home-assistant.io/redirect/hacs_repository/?owner=hass-cortex&repository=cortex-tts&category=integration
 [hacs-badge]: https://my.home-assistant.io/badges/hacs_repository.svg
 [va]: https://my.home-assistant.io/redirect/voice_assistants/
 [va-badge]: https://my.home-assistant.io/badges/voice_assistants.svg

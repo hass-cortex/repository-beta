@@ -1,9 +1,10 @@
-# Hojo TTS
+# Cortex TTS
 
 ![Supports amd64 Architecture][amd64-shield] ![Supports aarch64 Architecture][aarch64-shield] ![Supports armv7 Architecture][armv7-shield]
 
 On-device text-to-speech for Home Assistant, built on the
-[Hojo TTS Light](https://github.com/HojoAI/Hojo-TTS-Light) ONNX models.
+[Hojo TTS Light](https://github.com/HojoAI/Hojo-TTS-Light) and
+[MOSS-TTS-Nano](https://github.com/OpenMOSS/MOSS-TTS-Nano) ONNX models.
 
 Runs on CPU. Ships the Chinese text pipeline the model does not have:
 Traditional-to-Simplified glyph conversion and number/unit/time normalisation.
