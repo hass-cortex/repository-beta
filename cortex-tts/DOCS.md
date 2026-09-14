@@ -1,20 +1,26 @@
 # Cortex TTS
 
-On-device text-to-speech for Home Assistant. Three ONNX models running locally —
-on the CPU, or on a GPU where one answers — no cloud, no API bill, with the
-Chinese text front-end none of them ship.
+On-device text-to-speech for Home Assistant. A catalog of models running
+locally — on the CPU, or on a GPU where one answers — no cloud, no API bill,
+with the Chinese text front-end none of them ship.
 
-| Model         | Voices                            | Languages  | RTF on a 4-core HA VM | Memory  | Disk   |
-| ------------- | --------------------------------- | ---------- | --------------------- | ------- | ------ |
-| **Hojo 40M**  | 15 built in (2 zh, 13 en)         | zh, en     | **0.67**              | ~780 MB | 241 MB |
-| **Hojo 80M**  | clones only                       | zh, en     | 1.42                  | ~2 GB   | 437 MB |
-| **MOSS Nano** | 18 built in (6 zh) **and** clones | zh, en, ja | 1.06                  | ~2 GB   | 729 MB |
+| Model               | Voices                            | Languages  | Relative cost | Memory  | Disk   |
+| ------------------- | --------------------------------- | ---------- | ------------- | ------- | ------ |
+| **Hojo 40M**        | 15 built in (2 zh, 13 en)         | zh, en     | **0.55**      | ~780 MB | 241 MB |
+| **MOSS Nano**       | 18 built in (6 zh) **and** clones | zh, en, ja | 1.07          | ~2 GB   | 729 MB |
+| **Hojo 80M**        | clones only                       | zh, en     | 1.51          | ~2 GB   | 437 MB |
+| **OmniVoice**       | 9 designed **and** clones         | 800+       | 3.83          | ~1.1 GB | 1.4 GB |
+| **Qwen3-TTS**       | 9 built in (5 zh)                 | 10         | 6.72          | ~1.6 GB | 1.0 GB |
+| **Qwen3-TTS clone** | clones only                       | 10         | 6.87          | ~2.1 GB | 1.3 GB |
 
-RTF is render time over audio time, measured for all three on the same host
-— a Home Assistant OS VM with 4 vCPU of an Intel Core i7-9750H and 8 GB, two inference threads, CPU —
-so the column compares the models with each other; below 1 outruns playback. Start with the **40M**, the only one
-that does on that class of host. Which model suits what, how each one clones,
-and what a faster CPU or a GPU changes is in [Models][models].
+**That column is not a prediction about your machine.** It is render time over
+audio time with every model measured on one host — a VM with 4 vCPU of an
+Intel Core i7-9750H, two inference threads, CPU — so it ranks the models
+against each other and nothing else; below 1 means the model outran playback
+_there_. Once the app is running, each model's card shows what **your** host
+measured, or says it has none yet. Start at the top of the table; the lower
+entries want a faster machine or a GPU. Which model suits what, how each one
+clones, and what a faster CPU or a GPU changes is in [Models][models].
 
 None of these models can pronounce Traditional Chinese glyphs or an Arabic
 numeral, so the app rewrites both before synthesis — 32% character error rate
@@ -58,13 +64,16 @@ model becomes its own TTS entity (`tts.hojo_tts_light_40m`,
 [![Open your Home Assistant instance and manage your voice assistants.][va-badge]][va]
 
 Pick (or create) a pipeline → **Text-to-speech** → choose the Cortex TTS entity,
-then the voice. The voice is what picks the language: the model takes no
-language parameter, so a Chinese voice is the only thing that makes it read
-Chinese.
+then the voice. On most models the voice is what picks the language — a
+Chinese voice is the only thing that makes them read Chinese. Qwen3-TTS and
+OmniVoice take a language of their own, and there the pipeline's language is
+sent with every reply, so the speaker is a timbre rather than a language.
 
 How to call it from `tts.speak`, find a voice id, and choose a speaking mode
 per model is the [integration's documentation][integration]. Uploading a
-recording to clone a voice is [Cloned voices][cloning].
+recording to clone a voice is [Cloned voices][cloning]; the recordings live in
+`/share/cortex-tts/references`, so they are part of your backups and can be
+copied off over the `share` folder.
 
 ## Configuration
 
@@ -95,11 +104,40 @@ your network; every request then needs the key above.
 
 ## Settings
 
-Open the app and scroll to **Settings**. Two of these — threads and execution
-provider — are bound when ONNX Runtime creates a session, so changing one drops
-whatever is resident and the next reply loads it again; a smaller **Models kept
-in memory** evicts down to the new bound; the rest are read afresh on every
-request.
+Open the app and scroll to **Settings**, in two groups: the defaults a request
+falls back to when it names none, and what this host spends on answering it.
+Two of these — threads and execution provider — are bound when ONNX Runtime
+creates a session, so changing one drops whatever is resident and the next
+reply loads it again; a smaller **Models kept in memory** evicts down to the
+new bound; the rest are read afresh on every request.
+
+### Default model and voice
+
+Used when a request does not name one. A voice the chosen model does not offer
+is ignored and the first available one is used instead, so leaving the voice
+empty always takes the first.
+
+### Preload
+
+Load the default model when the app starts rather than on the first request.
+It takes that model's memory from the moment the app comes up whether or not
+anything asks it to speak, and in exchange the first reply does not pay the
+load — several seconds on the larger models.
+
+### Sampling temperature
+
+How randomly the model picks each step. Default `0.8`. A model stops speaking
+only when it _samples_ its end-of-speech token, so a higher value occasionally
+over-runs the text with an invented syllable.
+
+`0` is greedy: reproducible, flatter, and on the Hojo models it never
+over-runs. **Not on Qwen3-TTS** — there, greedy decoding often fails to sample
+end-of-speech at all, and the reply is cut off at the model's own ceiling
+instead.
+
+The Hojo models and Qwen3-TTS read this setting. MOSS and OmniVoice fuse their
+sampling into a dedicated graph and have no temperature at all, so a request
+naming one for those is refused rather than silently ignored.
 
 ### Inference threads
 
@@ -140,29 +178,24 @@ How many models may stay in memory at once. The 40M needs about 780 MB, the
 demand. Raise it to `2` only if the host can hold two — about 2.8 GB for the
 40M beside either of the others, about 4 GB for the 80M beside MOSS.
 
-### Default model and voice
+### Unload when idle
 
-Used when a request does not name one. A voice the chosen model does not offer
-is ignored and the first available one is used instead, so leaving the voice
-empty always takes the first.
+Seconds after its last request a model is dropped from memory; `0`, the
+default, keeps it until something evicts it. The next reply then pays the load
+again — about a second for the 40M, about 4 s for MOSS on a GPU. Worth setting
+on a card another workload shares: MOSS holds about 2.5 GB of a GPU for as
+long as it is resident, whether or not anyone is speaking.
 
-### Sampling temperature
+### Refuse over-long replies
 
-How randomly the model picks each step. Default `0.8`. It stops speaking only
-when it _samples_ its end-of-speech token, so a higher value occasionally
-over-runs the text with an invented syllable. `0` is greedy: reproducible,
-never over-runs, at the cost of flatter delivery.
-
-Only the two Hojo models read it. MOSS fuses its sampling into a dedicated ONNX
-graph and has no temperature at all: this setting is ignored for it, and a
-request that names a `temperature` for MOSS over the API is refused rather than
-silently ignored.
-
-### Load the default model at startup
-
-Load the default model when the app starts rather than on the first request.
-Costs about a second of startup and roughly 780 MB of memory, and removes that
-delay from the first thing you ask it to say.
+Seconds; a reply whose estimated render would take longer than this on the
+chosen model's measured speed is refused with a clear error rather than
+rendered. `0`, the default, accepts any length. What it stops is a reply long
+enough to render past the caller's own timeout: the audio then finishes into a
+connection nobody is reading, having held the model for the whole of it — one
+514-character story measured at over seven minutes on a CPU that renders
+OmniVoice at 4.6x. The estimate needs the model to have been measured on this
+host at least once, so the very first long reply on a fresh model still runs.
 
 ## Troubleshooting
 
@@ -197,7 +230,7 @@ when it samples an end-of-speech token, so stopping is probabilistic. Set
 never over-runs.
 
 **First request is slow, later ones are fast.** That is the model load. Turn on
-**Load the default model at startup**, or raise **Models kept in memory** if
+**Preload**, or raise **Models kept in memory** if
 you switch between models often.
 
 **Memory pressure.** Keep **Models kept in memory** at 1, and prefer the 40M.
