@@ -2,7 +2,7 @@ name: Cortex TTS
 description: "On-device text-to-speech for Home Assistant \u2014 a choice of models\
   \ running locally, built-in voices or one cloned from a short recording, plus the\
   \ Chinese text pipeline they all lack"
-version: 0.7.0
+version: 0.8.0
 slug: cortex_tts
 url: https://github.com/hass-cortex/app-cortex-tts
 arch:
