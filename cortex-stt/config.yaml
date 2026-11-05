@@ -1,7 +1,7 @@
 name: Cortex STT
 description: Multi-model speech-to-text service (Whisper, Parakeet, SenseVoice, Qwen3-ASR,
   and more) with WebSocket streaming
-version: 0.6.0
+version: 0.6.1
 slug: cortex_stt
 url: https://github.com/hass-cortex/app-cortex-stt
 arch:
@@ -36,4 +36,4 @@ schema:
   log_level: list(trace|debug|info|warning|error|fatal)
   log_filter: str?
   discovery_api_key: password?
-image: ghcr.io/hass-cortex/cortex_stt/{arch}
+image: ghcr.io/hass-cortex/cortex_stt
