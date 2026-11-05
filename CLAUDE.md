@@ -15,7 +15,7 @@ repository-beta/
 ├── .github/workflows/
 │   └── repository-updater.yaml
 ├── cortex-stt/               # mirrors stable + pre-releases
-│   ├── config.yaml           # image: ghcr.io/hass-cortex/cortex_stt/{arch}
+│   ├── config.yaml           # image: ghcr.io/hass-cortex/cortex_stt (multi-arch manifest)
 │   ├── DOCS.md
 │   ├── CHANGELOG.md          # auto-generated
 │   ├── icon.png
